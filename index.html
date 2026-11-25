@@ -3,6 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0F172A">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Météo Horizon">
+    <link id="favicon-svg" rel="icon" type="image/svg+xml">
+    <link id="favicon-png" rel="icon" type="image/png" sizes="192x192">
+    <link id="apple-touch-icon" rel="apple-touch-icon" sizes="180x180">
+    <link id="pwa-manifest-link" rel="manifest">
     <title>Météo Horizon — Prévisions Haute Précision</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -305,6 +313,38 @@
                             <button onclick="sendTestAlert()" class="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 border border-white/15 text-xs font-semibold text-white transition flex items-center gap-1.5">
                                 <i data-lucide="send" class="w-3.5 h-3.5 text-amber-300"></i>
                                 <span>Tester une alerte</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Bloc Raccourci & Icône Météo Horizon -->
+                    <div class="rounded-2xl bg-white/[0.06] border border-white/12 p-4 space-y-3">
+                        <div class="flex items-center justify-between gap-2">
+                            <span class="text-xs font-bold uppercase tracking-wider text-white/85 flex items-center gap-1.5">
+                                <i data-lucide="app-window" class="w-3.5 h-3.5 text-amber-300"></i>
+                                <span>Raccourci &amp; Icône d'app</span>
+                            </span>
+                            <span id="shortcut-status-badge" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-sky-400/15 text-sky-200 border border-sky-300/25">Vérification...</span>
+                        </div>
+
+                        <div class="flex items-center gap-3.5">
+                            <img id="shortcut-icon-preview" alt="Aperçu icône Météo Horizon" class="w-16 h-16 rounded-2xl border border-white/20 shadow-lg shrink-0 bg-slate-900">
+                            <div class="min-w-0">
+                                <p class="text-xs font-semibold text-white">Icône Météo Horizon (512×512)</p>
+                                <p id="shortcut-context-desc" class="text-[11px] text-white/65 mt-0.5 leading-relaxed">
+                                    Soleil doré levant derrière un nuage doux et lignes d'horizon sur dégradé bleu ciel profond vers indigo.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="flex flex-wrap items-center gap-2 pt-0.5">
+                            <button type="button" onclick="downloadAppIconPNG()" class="px-3 py-2 rounded-xl bg-white/12 hover:bg-white/22 border border-white/15 text-xs font-semibold text-white transition flex items-center gap-1.5">
+                                <i data-lucide="download" class="w-3.5 h-3.5 text-amber-300"></i>
+                                <span>Télécharger l'icône PNG</span>
+                            </button>
+                            <button type="button" onclick="refreshShortcutSetup()" class="px-3 py-2 rounded-xl bg-white/8 hover:bg-white/15 border border-white/10 text-xs font-semibold text-white/80 hover:text-white transition flex items-center gap-1.5">
+                                <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+                                <span>Vérifier</span>
                             </button>
                         </div>
                     </div>
@@ -776,6 +816,7 @@
         // 2. INITIALISATION
         // ==========================================
         document.addEventListener('DOMContentLoaded', () => {
+            initShortcutAndManifest();
             lucide.createIcons();
             initAtmosphericCanvas();
             loadFavorites();
@@ -784,10 +825,297 @@
             renderAlertRulesUI();
             renderAlertHistoryUI();
             updateBrowserNotificationUI();
-            setupSearchListeners();
-            setupKeyboardListeners();
             fetchWeatherForCity(state.currentCity);
         });
+
+        // ==========================================
+        // 2B. LOGO RACCOURCI, ICÔNES PNG/SVG & MANIFESTE PWA
+        // ==========================================
+        let generatedAppIcons = {
+            svgDataUrl: '',
+            png180: '',
+            png192: '',
+            png512: '',
+            manifestUrl: ''
+        };
+
+        /**
+         * Génère le SVG vectoriel du logo Météo Horizon :
+         * soleil doré chaud se levant derrière un nuage doux avec lignes d'horizon/vent
+         * sur un dégradé bleu ciel profond vers indigo.
+         */
+        function buildHorizonLogoSVG() {
+            return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+                <defs>
+                    <linearGradient id="bgSkyIndigo" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#0369A1"/>
+                        <stop offset="52%" stop-color="#1D4ED8"/>
+                        <stop offset="100%" stop-color="#1E1B4B"/>
+                    </linearGradient>
+                    <radialGradient id="sunGlow" cx="50%" cy="50%" r="50%">
+                        <stop offset="0%" stop-color="#FEF08A" stop-opacity="0.95"/>
+                        <stop offset="55%" stop-color="#F59E0B" stop-opacity="0.35"/>
+                        <stop offset="100%" stop-color="#F59E0B" stop-opacity="0"/>
+                    </radialGradient>
+                    <linearGradient id="goldenSun" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#FEF08A"/>
+                        <stop offset="55%" stop-color="#FBBF24"/>
+                        <stop offset="100%" stop-color="#EA580C"/>
+                    </linearGradient>
+                    <linearGradient id="softCloud" x1="0%" y1="0%" x2="0%" y2="100%">
+                        <stop offset="0%" stop-color="#FFFFFF"/>
+                        <stop offset="100%" stop-color="#E2E8F0"/>
+                    </linearGradient>
+                    <filter id="cloudShadow" x="-15%" y="-15%" width="130%" height="135%">
+                        <feDropShadow dx="0" dy="10" stdDeviation="12" flood-color="#090D16" flood-opacity="0.32"/>
+                    </filter>
+                </defs>
+
+                <!-- Fond dégradé bleu ciel profond vers indigo -->
+                <rect x="0" y="0" width="512" height="512" rx="116" fill="url(#bgSkyIndigo)"/>
+
+                <!-- Halo lumineux autour du soleil levant -->
+                <circle cx="316" cy="212" r="145" fill="url(#sunGlow)"/>
+
+                <!-- Soleil doré chaud se levant derrière le nuage -->
+                <circle cx="316" cy="212" r="76" fill="url(#goldenSun)"/>
+
+                <!-- Nuage doux au premier plan -->
+                <g filter="url(#cloudShadow)">
+                    <path d="M144 316
+                             C114 316 92 293 92 265
+                             C92 239 112 218 138 215
+                             C149 175 186 148 229 148
+                             C276 148 315 181 323 226
+                             C353 229 376 254 376 284
+                             C376 302 362 316 344 316 Z"
+                          fill="url(#softCloud)"/>
+                </g>
+
+                <!-- Subtiles lignes d'horizon et de brise/vent -->
+                <g fill="none" stroke-linecap="round">
+                    <line x1="112" y1="358" x2="400" y2="358" stroke="#BAE6FD" stroke-opacity="0.45" stroke-width="7"/>
+                    <path d="M138 388 H326 C348 388 362 375 362 358" stroke="#FDE68A" stroke-opacity="0.55" stroke-width="6.5"/>
+                    <line x1="166" y1="416" x2="352" y2="416" stroke="#93C5FD" stroke-opacity="0.35" stroke-width="6"/>
+                </g>
+            </svg>`;
+        }
+
+        /**
+         * Dessine le logo directement sur un Canvas haute résolution pour obtenir un PNG propre
+         * sans dépendre uniquement du rendu SVG-dans-image du navigateur.
+         */
+        function renderLogoToPngDataUrl(size) {
+            const canvas = document.createElement('canvas');
+            canvas.width = size;
+            canvas.height = size;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) return '';
+
+            const s = size / 512;
+            ctx.save();
+            ctx.scale(s, s);
+
+            // Coins arrondis de l'icône
+            const radius = 116;
+            ctx.beginPath();
+            ctx.roundRect(0, 0, 512, 512, radius);
+            ctx.clip();
+
+            // Dégradé bleu ciel profond vers indigo
+            const bgGrad = ctx.createLinearGradient(0, 0, 512, 512);
+            bgGrad.addColorStop(0, '#0369A1');
+            bgGrad.addColorStop(0.52, '#1D4ED8');
+            bgGrad.addColorStop(1, '#1E1B4B');
+            ctx.fillStyle = bgGrad;
+            ctx.fillRect(0, 0, 512, 512);
+
+            // Halo lumineux du soleil
+            const glowGrad = ctx.createRadialGradient(316, 212, 12, 316, 212, 150);
+            glowGrad.addColorStop(0, 'rgba(254, 240, 138, 0.9)');
+            glowGrad.addColorStop(0.55, 'rgba(245, 158, 11, 0.35)');
+            glowGrad.addColorStop(1, 'rgba(245, 158, 11, 0)');
+            ctx.fillStyle = glowGrad;
+            ctx.beginPath();
+            ctx.arc(316, 212, 150, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Soleil doré chaud
+            const sunGrad = ctx.createLinearGradient(240, 136, 392, 288);
+            sunGrad.addColorStop(0, '#FEF08A');
+            sunGrad.addColorStop(0.55, '#FBBF24');
+            sunGrad.addColorStop(1, '#EA580C');
+            ctx.fillStyle = sunGrad;
+            ctx.beginPath();
+            ctx.arc(316, 212, 76, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Nuage doux au premier plan
+            ctx.save();
+            ctx.shadowColor = 'rgba(9, 13, 22, 0.34)';
+            ctx.shadowBlur = 22;
+            ctx.shadowOffsetY = 10;
+
+            const cloudGrad = ctx.createLinearGradient(0, 148, 0, 316);
+            cloudGrad.addColorStop(0, '#FFFFFF');
+            cloudGrad.addColorStop(1, '#E2E8F0');
+            ctx.fillStyle = cloudGrad;
+
+            ctx.beginPath();
+            ctx.moveTo(144, 316);
+            ctx.bezierCurveTo(114, 316, 92, 293, 92, 265);
+            ctx.bezierCurveTo(92, 239, 112, 218, 138, 215);
+            ctx.bezierCurveTo(149, 175, 186, 148, 229, 148);
+            ctx.bezierCurveTo(276, 148, 315, 181, 323, 226);
+            ctx.bezierCurveTo(353, 229, 376, 254, 376, 284);
+            ctx.bezierCurveTo(376, 302, 362, 316, 344, 316);
+            ctx.closePath();
+            ctx.fill();
+            ctx.restore();
+
+            // Subtiles lignes d'horizon et de brise
+            ctx.lineCap = 'round';
+            ctx.strokeStyle = 'rgba(186, 230, 253, 0.45)';
+            ctx.lineWidth = 7;
+            ctx.beginPath();
+            ctx.moveTo(112, 358);
+            ctx.lineTo(400, 358);
+            ctx.stroke();
+
+            ctx.strokeStyle = 'rgba(253, 230, 138, 0.55)';
+            ctx.lineWidth = 6.5;
+            ctx.beginPath();
+            ctx.moveTo(138, 388);
+            ctx.lineTo(326, 388);
+            ctx.arc(326, 373, 15, Math.PI / 2, -Math.PI / 2, true);
+            ctx.stroke();
+
+            ctx.strokeStyle = 'rgba(147, 197, 253, 0.35)';
+            ctx.lineWidth = 6;
+            ctx.beginPath();
+            ctx.moveTo(166, 416);
+            ctx.lineTo(352, 416);
+            ctx.stroke();
+
+            ctx.restore();
+            return canvas.toDataURL('image/png');
+        }
+
+        /**
+         * Injecte le favicon SVG, les icônes PNG (180, 192, 512), l'apple-touch-icon
+         * et le manifeste PWA dynamique dans le <head>.
+         */
+        function initShortcutAndManifest() {
+            try {
+                const svgString = buildHorizonLogoSVG();
+                const svgDataUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svgString)}`;
+                const png180 = renderLogoToPngDataUrl(180);
+                const png192 = renderLogoToPngDataUrl(192);
+                const png512 = renderLogoToPngDataUrl(512);
+
+                generatedAppIcons = {
+                    svgDataUrl,
+                    png180,
+                    png192,
+                    png512,
+                    manifestUrl: generatedAppIcons.manifestUrl || ''
+                };
+
+                const svgLink = document.getElementById('favicon-svg');
+                const pngLink = document.getElementById('favicon-png');
+                const appleIconLink = document.getElementById('apple-touch-icon');
+                const manifestLink = document.getElementById('pwa-manifest-link');
+                const previewImg = document.getElementById('shortcut-icon-preview');
+
+                if (svgLink) svgLink.href = svgDataUrl;
+                if (pngLink && png192) pngLink.href = png192;
+                if (appleIconLink && png180) appleIconLink.href = png180;
+                if (previewImg) previewImg.src = png512 || svgDataUrl;
+
+                const manifestObj = {
+                    name: "Météo Horizon",
+                    short_name: "Météo Horizon",
+                    description: "Prévisions météorologiques en temps réel, graphiques horaires, prévisions 7 jours et alertes intelligentes.",
+                    start_url: "./",
+                    scope: "./",
+                    display: "standalone",
+                    orientation: "portrait-primary",
+                    background_color: "#0F172A",
+                    theme_color: "#0F172A",
+                    lang: "fr",
+                    icons: [
+                        {
+                            src: png192 || svgDataUrl,
+                            sizes: "192x192",
+                            type: "image/png",
+                            purpose: "any maskable"
+                        },
+                        {
+                            src: png512 || svgDataUrl,
+                            sizes: "512x512",
+                            type: "image/png",
+                            purpose: "any maskable"
+                        }
+                    ]
+                };
+
+                if (generatedAppIcons.manifestUrl && generatedAppIcons.manifestUrl.startsWith('blob:')) {
+                    URL.revokeObjectURL(generatedAppIcons.manifestUrl);
+                }
+
+                const manifestBlob = new Blob([JSON.stringify(manifestObj)], { type: 'application/manifest+json' });
+                const manifestUrl = URL.createObjectURL(manifestBlob);
+                generatedAppIcons.manifestUrl = manifestUrl;
+                if (manifestLink) manifestLink.href = manifestUrl;
+
+                updateShortcutReadinessUI();
+            } catch (err) {
+                updateShortcutReadinessUI();
+            }
+        }
+
+        function updateShortcutReadinessUI() {
+            const badge = document.getElementById('shortcut-status-badge');
+            const desc = document.getElementById('shortcut-context-desc');
+            if (!badge || !desc) return;
+
+            const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+            const isSecure = window.isSecureContext || window.location.protocol === 'https:';
+
+            if (isStandalone) {
+                badge.textContent = "Installée (Standalone)";
+                badge.className = "px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-400/20 text-emerald-200 border border-emerald-300/30";
+                desc.textContent = "L'application s'exécute en mode raccourci autonome avec l'icône Météo Horizon.";
+            } else if (isSecure) {
+                badge.textContent = "Prêt pour l'installation";
+                badge.className = "px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-400/20 text-emerald-200 border border-emerald-300/30";
+                desc.textContent = "Manifeste et icônes actifs : utilisez « Installer l'application » ou « Ajouter à l'écran d'accueil » dans votre navigateur.";
+            } else {
+                badge.textContent = "Icônes prêtes (HTTPS conseillé)";
+                badge.className = "px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-400/20 text-amber-200 border border-amber-300/30";
+                desc.textContent = "Favicon et apple-touch-icon sont actifs. Pour l'installation PWA complète, hébergez en HTTPS (ex. GitHub Pages).";
+            }
+        }
+
+        function downloadAppIconPNG() {
+            const dataUrl = generatedAppIcons.png512 || renderLogoToPngDataUrl(512);
+            if (!dataUrl) {
+                showToast("Impossible de générer l'icône PNG.", "error");
+                return;
+            }
+            const link = document.createElement('a');
+            link.href = dataUrl;
+            link.download = 'meteo-horizon-icon-512.png';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            showToast("Icône Météo Horizon (512×512 PNG) téléchargée.", "success");
+        }
+
+        function refreshShortcutSetup() {
+            initShortcutAndManifest();
+            showToast("Icônes et manifeste Météo Horizon vérifiés.", "info");
+        }
 
         function setupKeyboardListeners() {
             document.addEventListener('keydown', (e) => {
