@@ -1,0 +1,26 @@
+name: Alertes météo
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"   # toutes les ~15 min (GitHub peut retarder de quelques minutes)
+  workflow_dispatch:          # lancement manuel pour tester
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Vérifier les alertes et notifier
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          CITY_NAME: "La Brède"
+          CITY_LAT: "44.6814"
+          CITY_LON: "-0.5278"
+        run: python scripts/check_alerts.py
