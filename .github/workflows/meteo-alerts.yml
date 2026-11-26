@@ -20,7 +20,5 @@ jobs:
       - name: Vérifier les alertes et notifier
         env:
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
-          CITY_NAME: "La Brède"
-          CITY_LAT: "44.6814"
-          CITY_LON: "-0.5278"
+          SUMMARY_HOUR: "19"   # heure (Paris) du récap de demain
         run: python scripts/check_alerts.py
